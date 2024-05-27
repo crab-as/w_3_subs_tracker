@@ -20,14 +20,19 @@ describe("main_state", () => {
   
   it("The PDA should be initialized!", async () => {
     // Add your test here.
-    const tx = await program.methods
-    .intializeMainState()
-    .accounts({
-      mainState: pda,
-    })
-    .rpc();
-    // show the main state
-    const mainState = await program.account.mainState.fetch(pda);
+    try {
+      const tx = await program.methods
+      .intializeMainState(10)
+      .accounts({
+        mainState: pda,
+      })
+      .rpc();
+      // show the main state
+      const mainState = await program.account.mainState.fetch(pda);
+    } catch (e) {
+      console.log(e);
+      throw new Error("Error while trying to initialize the main state");
+    }
   });
 
   it('Should load the main state with correct authority value', async () => {
