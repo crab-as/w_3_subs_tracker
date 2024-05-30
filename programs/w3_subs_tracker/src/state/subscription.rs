@@ -22,11 +22,12 @@ impl Subscription {
         self.authority_writable = AuthorityWritable {
             current_account_type: SubscriptionType::FREE,
             valid_till: 0,
+            used_lamports: 0,
         };
-        let current_acumulated_sol = self.subscription_status_writable.after_verify_acumulated_sol;
+        let current_acumulated_sol = self.subscription_status_writable.after_verify_credit_lamports;
 
         self.subscription_status_writable = CurrentSubscriptionStatistics {
-            after_verify_acumulated_sol: if withdraw_content { 0 } else { current_acumulated_sol },
+            after_verify_credit_lamports: if withdraw_content { 0 } else { current_acumulated_sol },
             after_verify_utc_timestamp: unix_time,
             desired_subscription_type: SubscriptionType::FREE,
         };
@@ -42,7 +43,7 @@ pub enum SubscriptionType {
 }
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct CurrentSubscriptionStatistics {
-    pub after_verify_acumulated_sol: u64,
+    pub after_verify_credit_lamports: u64,
     pub after_verify_utc_timestamp: i64,
     pub desired_subscription_type: SubscriptionType,
 }
@@ -51,6 +52,7 @@ pub struct CurrentSubscriptionStatistics {
 pub struct AuthorityWritable {
     pub current_account_type: SubscriptionType,
     pub valid_till: i64,
+    pub used_lamports: u64
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]

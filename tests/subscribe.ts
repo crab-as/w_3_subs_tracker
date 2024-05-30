@@ -6,6 +6,11 @@ import { BN } from "bn.js";
 import { use } from "chai";
 
 describe("subscribe", async () => {
+    async function wait(ms: number) {
+        return new Promise(resolve => {
+            setTimeout(resolve, ms);
+        });
+    }
     // Configure the client to use the local cluster.
     const provider = anchor.AnchorProvider.env()
 
@@ -25,7 +30,6 @@ describe("subscribe", async () => {
         const [pda, _] = anchor.web3.PublicKey.findProgramAddressSync([Buffer.from('subscription'), userKeyPair.publicKey.toBuffer(), mainStatePDA.toBuffer()], program.programId);
         subsPdas.push(pda);
     }
-    console.log(subsPdas);
 
 
     it("The PDA should be initialized for subcribetion tests", async () => {
@@ -46,7 +50,6 @@ describe("subscribe", async () => {
         for(let i = 0; i < usersKeyPairs.length; i++) {
             const userKeyPair = usersKeyPairs[i];
             const tx = await provider.connection.requestAirdrop(userKeyPair.publicKey, LAMPORTS_PER_SOL);
-            console.log(`Airdrop to ${userKeyPair.publicKey.toBase58()}`);
             await provider.connection.confirmTransaction(tx);
         }
     });
@@ -63,13 +66,10 @@ describe("subscribe", async () => {
             .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey})
             .signers([userKeyPair])
             .rpc();
-            console.log(`Tx: ${tx}`);
             const pda = subsPdas[i];
             const subsInfo = await program.account.subscription.fetch(pda);
-            console.log(`Subscription: ${JSON.stringify(subsInfo)}`);
             const balance = await provider.connection.getBalance(pda);
             if (balance < LAMPORTS_PER_SOL * 0.25)  throw new Error("Balance is not correct");
-            console.log(`Balance: ${balance / LAMPORTS_PER_SOL} SOL`);
         }   
     });
 
@@ -86,13 +86,13 @@ describe("subscribe", async () => {
             })
             .rpc();
         const subsInfo = await program.account.subscription.fetch(pda);
-        console.log(`Last payment date: ${new Date(subsInfo.subscriptionStatusWritable.afterVerifyUtcTimestamp.toNumber())} and valid till: ${new Date(subsInfo.authorityWritable.validTill.toNumber())}`);
     });
 
     it("Shouldn't let make second user as active subcriber, due to fakeProvider, but after changing authority it will change it's valid_till", async () => {
         const user2 = usersKeyPairs[1];
         const pda = subsPdas[1];
         const futureDate = new BN(Date.now() + 1000 * 60 * 60 * 24 * 30);
+        let err = null;
         try {
             await program.methods
                 .setSubscriptionInfo(new BN(futureDate), null , null)
@@ -103,7 +103,7 @@ describe("subscribe", async () => {
                 })
                 .signers([fakeProvider])
                 .rpc();
-            throw new Error("Shouldn't let make second user as active subcriber, due to fakeProvider");
+            err = "Shouldn't let make second user as active subcriber, due to fakeProvider";
         } catch (error) {
             const tx = await program.methods
                 .updateAuthority(fakeProvider.publicKey)
@@ -127,6 +127,7 @@ describe("subscribe", async () => {
                 })
                 .rpc();
         }
+        if (err) throw new Error(err);
     })  
 
     it("Should let user funds his subs PDA account", async () => {
@@ -140,44 +141,49 @@ describe("subscribe", async () => {
         
 
         const subsInfo = await program.account.subscription.fetch(pda);
-        console.log(`Subscription: ${JSON.stringify(subsInfo)}`);
         const balance = await provider.connection.getBalance(pda);
         if (balance < LAMPORTS_PER_SOL * 0.5)  throw new Error("Balance is not correct");
-        console.log(`Balance: ${balance / LAMPORTS_PER_SOL} SOL`);
     })
 
-    it("Should withdraw funds from PDA account as authority", async () => {
+    it("Should not withdraw any funds from PDA account as authority because they are used as credits", async () => {
         const user1 = usersKeyPairs[0];
         const pda = subsPdas[0];
         const pdaInfo = await program.account.subscription.fetch(pda);
         const balancePdaBefore = await provider.connection.getBalance(pda);
-        console.log(`PDA balance before: ${balancePdaBefore / LAMPORTS_PER_SOL} SOL`);
-
         const beforeBalance = await provider.connection.getBalance(provider.publicKey);
-        console
-        const tx = await program.methods
-            .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
-            .accounts({mainState: mainStatePDA, user: user1.publicKey,
-                    authority: provider.publicKey, toAccount: provider.publicKey})
-            .rpc();
-        const balance = await provider.connection.getBalance(provider.publicKey);
-        if (balance < beforeBalance + LAMPORTS_PER_SOL * 0.08) throw new Error("Balance is not correct");
-        // now withdraw all funds
+        let error = null;
+        try {
+            const tx = await program.methods
+                .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
+                .accounts({mainState: mainStatePDA, user: user1.publicKey,
+                        authority: provider.publicKey, toAccount: provider.publicKey})
+                .rpc();
+            error = "Should not withdraw any funds from PDA account as authority because they are used as credits";
+
+        } catch (error) {}
+        if (error) throw new Error(error);
+        const balanceOfPdaBefore = await provider.connection.getBalance(pda);
         const tx1 = await program.methods
             .withdraw(null)
             .accounts({mainState: mainStatePDA, user: user1.publicKey,
                     authority: provider.publicKey, toAccount: provider.publicKey})
             .rpc();
-        const balance1 = await provider.connection.getBalance(pda);
-        console.log(`PDA balance AFTER: ${balance1 / LAMPORTS_PER_SOL} SOL`);
+        const balanceOfPdaAfter = await provider.connection.getBalance(pda);
 
-        if (balance1 > 0) throw new Error("Balance is not correct");
+        if (balanceOfPdaAfter !== balanceOfPdaBefore) throw new Error("Balance is not correct");
     })
     it("Shouldn't let withdraw funds from PDA account as user or as fakeProvider", async () => {
         const user2 = usersKeyPairs[1];
         const pda = subsPdas[1];
         const pdaInfo = await program.account.subscription.fetch(pda);
         const beforeBalance = await provider.connection.getBalance(provider.publicKey);
+        let err = null;
+
+        await program.methods
+            .setSubscriptionInfo(new BN(Date.now() + 1000), new BN(LAMPORTS_PER_SOL * 0.1), null)
+            .accounts({mainState: mainStatePDA, user: user2.publicKey, authority: provider.wallet.publicKey})
+            .rpc();
+        await wait(2000);
         try {
             const tx = await program.methods
                 .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
@@ -185,10 +191,9 @@ describe("subscribe", async () => {
                         authority: provider.publicKey, toAccount: user2.publicKey})
                 .signers([user2])
                 .rpc();
-            throw new Error("Shouldn't let withdraw funds from PDA account as user");
+            err = "Shouldn't let withdraw funds from PDA account as user";
         } catch (error) {
-            console.log("User can't withdraw funds from PDA account");
-            console.log("E: " +  error)
+            if (err) throw new Error(err);
             try {
                 const tx = await program.methods
                     .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
@@ -196,15 +201,36 @@ describe("subscribe", async () => {
                             authority: provider.publicKey, toAccount: fakeProvider.publicKey})
                     .signers([fakeProvider])
                     .rpc();
-                throw new Error("Shouldn't let withdraw funds from PDA account as fakeProvider");
+                err = "Shouldn't let withdraw funds from PDA account as fakeProvider";
             } catch (error) {
-                console.log("FakeProvider can't withdraw funds from PDA account");
-                console.log("E: " +  error)
             }
         }
+        try {
+            const tx = await program.methods
+                .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
+                .accounts({mainState: mainStatePDA, user: user2.publicKey,
+                        authority: user2.publicKey, toAccount: user2.publicKey})
+                .signers([user2])
+                .rpc();
+            err = "Shouldn't let withdraw funds from PDA account as user";
+        } catch (error) {
+            if (err) throw new Error(err);
+            try {
+                const tx = await program.methods
+                    .withdraw(new BN(LAMPORTS_PER_SOL * 0.1))
+                    .accounts({mainState: mainStatePDA, user: user2.publicKey,
+                            authority: fakeProvider.publicKey, toAccount: fakeProvider.publicKey})
+                    .signers([fakeProvider])
+                    .rpc();
+                err = "Shouldn't let withdraw funds from PDA account as fakeProvider";
+            } catch (error) {
+            }
+        }
+        if (err) throw new Error(err);
     });
 
     
 
     
 })
+

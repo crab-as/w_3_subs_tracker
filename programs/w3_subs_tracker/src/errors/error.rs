@@ -6,10 +6,16 @@ pub enum SubscriptionError {
     InvalidInitialDeposit,
     #[msg("Authority is invalid")]
     InvalidAuthority,
+    #[msg("Owner is invalid")]
+    InvalidOwner,
     #[msg("Subscription date must be greater than 0")]
     InvalidSubscriptionDate,
+    #[msg("Not enough credits for subscription")]
+    NotEnoughCredits,
     #[msg("Not possible to withdraw given amount from subscription ... insufficient balance")]
     WithdrawFromSubscription,
     #[msg("Incorrect main state")]
     IncorrectMainState,
+    #[msg("Airthemtic error")]
+    AirthemticError,
 }
