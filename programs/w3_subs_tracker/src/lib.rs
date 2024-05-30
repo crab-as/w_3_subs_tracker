@@ -19,7 +19,7 @@ mod w_3_subs_tracker {
 
     use super::*;
     /**
-     * Initialize main state, which defines who is the owner and the authority. Owner can update the authority and the owner.
+     * Initialize main state, which defines who is the owner and the authority. After this step owner can update the authority and the owner.
      * Authority can interact with subscription instructions.
      * Authorised: MainState.owner
      */
@@ -46,6 +46,13 @@ mod w_3_subs_tracker {
      */
     pub fn create_subscription(ctx: Context<CreateSubscription>, initial_deposit: u64, account_type: SubscriptionType) -> Result<()> {
         subscription::processor::create_subscription(ctx, initial_deposit, account_type)
+    }
+    /**
+     * Instruction which will be used to change the desired subscription type for the user.
+     * Authorised: Subscription.user
+     */
+    pub fn change_desired_subscription_type(ctx: Context<ChangeSubscriptionType>, account_type: SubscriptionType) -> Result<()> {
+        subscription::processor::change_desired_subscription_type(ctx, account_type)
     }
     /**
      * Instruction which will be used to set the subscription date for the user.

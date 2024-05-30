@@ -13,33 +13,11 @@ pub struct Subscription {
     pub authority_writable: AuthorityWritable,
 }
 
-impl Subscription {
-   
-    /**
-     * Unsubcribes user from the subscription account. Meaning all properties are set to default values so the authority can check for potential validation
-     */
-    pub fn unsubscribe(&mut self,unix_time: i64, withdraw_content: bool) -> Result<()> {
-        self.authority_writable = AuthorityWritable {
-            current_account_type: SubscriptionType::FREE,
-            valid_till: 0,
-            used_lamports: 0,
-        };
-        let current_acumulated_sol = self.subscription_status_writable.after_verify_credit_lamports;
-
-        self.subscription_status_writable = CurrentSubscriptionStatistics {
-            after_verify_credit_lamports: if withdraw_content { 0 } else { current_acumulated_sol },
-            after_verify_utc_timestamp: unix_time,
-            desired_subscription_type: SubscriptionType::FREE,
-        };
-        Ok(())
-    }
-}
-
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub enum SubscriptionType {
     FREE,
     BASIC,
-    ADMIN,
+    PREMIUM,
 }
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct CurrentSubscriptionStatistics {

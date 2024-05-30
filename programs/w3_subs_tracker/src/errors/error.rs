@@ -18,4 +18,6 @@ pub enum SubscriptionError {
     IncorrectMainState,
     #[msg("Airthemtic error")]
     AirthemticError,
+    #[msg("Obligatory account is not found in the context")]
+    MissingObligatoryAccount,
 }

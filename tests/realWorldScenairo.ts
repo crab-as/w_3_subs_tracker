@@ -9,6 +9,7 @@ const shouldDebug = false;
 if(!shouldDebug) console.log = function() {};
 
 describe("real_world_scenairo", async () => {
+    // INITIALIZATIONS
     async function wait(ms: number) {
         return new Promise(resolve => {
             setTimeout(resolve, ms);
@@ -20,9 +21,10 @@ describe("real_world_scenairo", async () => {
     
     const idl = require("../target/idl/w_3_subs_tracker.json") as any;
     const program = new anchor.Program(idl, provider) as Program<W3SubsTracker>;
-    const usersKeyPairs = [anchor.web3.Keypair.generate(),  anchor.web3.Keypair.generate()];
+    const usersKeyPairs = [anchor.web3.Keypair.generate(),  anchor.web3.Keypair.generate(), anchor.web3.Keypair.generate()];
     const [mainStatePDA, _] = anchor.web3.PublicKey.findProgramAddressSync([Buffer.from('mainState')], program.programId);
     const subsPdas = [];
+    // INIT OF USERS, MAIN STATE, AIRDROPS
     it("Should init", async () => {
         for(let i = 0; i < usersKeyPairs.length; i++) {
             const userKeyPair = usersKeyPairs[i];
@@ -47,6 +49,8 @@ describe("real_world_scenairo", async () => {
            await provider.connection.confirmTransaction(tx);
        }
     });
+
+    // USER0
     it("Should let user: create subs acc -> fund more into account -> get vrified verified by BE -> close account -> reopen account", async () => {
         const userKeyPair = usersKeyPairs[0];
         const pda = subsPdas[0];
@@ -133,6 +137,7 @@ describe("real_world_scenairo", async () => {
         if (userBalanceAtStart - userBalance < 0.44 * LAMPORTS_PER_SOL || userBalanceAtStart - userBalance > 2.46 * LAMPORTS_PER_SOL) throw new Error("User balance at start is not correct");
     });
 
+    // USER1
     it("Should let user: create subs acc -> gets verified by BE -> fund more to keep account active -> get reverified by BE -> BE withdrawal during valid period -> BE withdrawal after valid period", async () => {
         let userKeyPair = usersKeyPairs[1];
         const pda = subsPdas[1];
@@ -241,9 +246,126 @@ describe("real_world_scenairo", async () => {
     });
 
 
+    // USER2
+    it("Should let user: create sub acc -> verified as basic -> unsubcribe to change type to premium -> fund more to make it to premium -> get reverified by BE -> BE withdraw -> unsubscribe from client ", async () => {
+        const userKeyPair = usersKeyPairs[2];
+        const pda = subsPdas[2];
+        const d = {basic: {}};
+        const p = {premium: {}};
 
-    describe("Should let user: create sub acc -> verified as baisc -> unsubcribe to change type to premium -> fund more to make it to premium -> get reverified by BE -> ", async () => {
+        const tx = await program.methods
+            .createSubscription(new BN(LAMPORTS_PER_SOL * 0.4), d)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey})
+            .signers([userKeyPair])
+            .rpc();
+        let balance = await provider.connection.getBalance(pda);
+        let subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER INIT SUBCRIPTION`)
+        console.log(`User has created a subscription account with ${balance / LAMPORTS_PER_SOL} SOL`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL \n`);
+        if (subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() !== LAMPORTS_PER_SOL * 0.4 ) throw new Error("Balance of credits is not correct");
+        if (balance < LAMPORTS_PER_SOL * 0.4 || balance > 0.41 * LAMPORTS_PER_SOL)  throw new Error("Balance is not correct");
 
+        const tx1 = await program.methods
+            .setSubscriptionInfo(new BN(Date.now() + 1000), new BN(LAMPORTS_PER_SOL * 0.3), d)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey, authority: provider.wallet.publicKey})
+            .rpc();
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER SET SUBSCRIPTION INFO`)
+        console.log(`User has been set up with subscription type to ${JSON.stringify(subsInfo.authorityWritable.currentAccountType)} and valid from ${new Date(subsInfo.subscriptionStatusWritable.afterVerifyUtcTimestamp.toNumber())} the valid till ${new Date(subsInfo.authorityWritable.validTill?.toNumber())}`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`In next step user will be using his subcription till 50% of valid till but decides to go to premium instead \n`)
+        await wait(500);
+
+        const tx2 = await program.methods
+            .unsubscribe(false)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey, mainStateOwner: provider.wallet.publicKey, toAccount: null})
+            .signers([userKeyPair])
+            .rpc({skipPreflight: true});
+
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER UNSUBSCRIBE`)
+        console.log(`User has unsubscribed from the subscription account, the account now PDA has ${await provider.connection.getBalance(pda) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`User has unsubscribed from the account, now he wants to create a new account with premium type \n`);
+        if (subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() <= 0.1 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.27 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
+
+        const tx3 = await program.methods
+            .changeDesiredSubscriptionType(p)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey})
+            .signers([userKeyPair])
+            .rpc();
+
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER CHANGE DESIRED SUBSCRIPTION TYPE`)
+        console.log(`User has changed his subscription type to ${JSON.stringify(subsInfo.subscriptionStatusWritable.desiredSubscriptionType)}`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`User has changed his subscription type to premium, now he wants to fund the account \n`);
+        const pdaCreditsAfterUnsubscribe = subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber();
+        if (pdaCreditsAfterUnsubscribe <= 0.1 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.27 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
+        
+        const tx4 = await program.methods
+            .fundSubscription(new BN(LAMPORTS_PER_SOL * 0.2))
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey})
+            .signers([userKeyPair])
+            .rpc();
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER FUND SUBSCRIPTION`)
+        console.log(`User has funded his account, the account now PDA has ${await provider.connection.getBalance(pda) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`User has funded his account, now he wants to get reverified by BE by calling some API \n`);
+        if (subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() !== pdaCreditsAfterUnsubscribe + LAMPORTS_PER_SOL * 0.2 ) throw new Error("Balance of credits is not correct");
+        if (subsInfo.authorityWritable.usedLamports.toNumber() !== LAMPORTS_PER_SOL * 0 ) throw new Error("Balance of debits is not correct");
+        
+
+        const tx5 = await program.methods
+            .setSubscriptionInfo(new BN(Date.now() + 1000), new BN(LAMPORTS_PER_SOL * 0.4), p)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey, authority: provider.wallet.publicKey})
+            .rpc();
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER REVERIFY`)
+        console.log(`User has been set up with subscription type to ${JSON.stringify(subsInfo.authorityWritable.currentAccountType)} and valid from ${new Date(subsInfo.subscriptionStatusWritable.afterVerifyUtcTimestamp.toNumber())} the valid till ${new Date(subsInfo.authorityWritable.validTill?.toNumber())}`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`User has been reverified by BE, now be will withdraw all funds it can \n`);
+        if (subsInfo.authorityWritable.validTill.toNumber() < Date.now()) throw new Error("Valid till date should be valid at this point");
+        const beforeWithdrawalProviderBalance = await provider.connection.getBalance(provider.wallet.publicKey);
+        
+        await wait(250);
+        const tx6 = await program.methods
+            .withdraw(null)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey, authority: provider.wallet.publicKey, toAccount: provider.wallet.publicKey})
+            .rpc();
+        subsInfo = await program.account.subscription.fetch(pda);
+        console.log(`__AFTER WITHDRAW`)
+        console.log(`Authority has withdrawn all SOL from the subscription account, the account now PDA has ${await provider.connection.getBalance(pda) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`Authority balance is ${await provider.connection.getBalance(provider.wallet.publicKey) / LAMPORTS_PER_SOL} SOL \n`);
+        if (subsInfo.authorityWritable.usedLamports.toNumber() !== 0.4 * LAMPORTS_PER_SOL ) throw new Error("Balance of debits is not correct");
+
+        // user usnubcsribes from given account causing given pda to be deleted
+        const providedBalanceBefore = await provider.connection.getBalance(provider.publicKey);
+        const tx7 = await program.methods
+            .unsubscribe(true)
+            .accounts({mainState: mainStatePDA, user: userKeyPair.publicKey, mainStateOwner: provider.wallet.publicKey, toAccount: userKeyPair.publicKey})
+            .signers([userKeyPair])
+            .rpc({skipPreflight: true});
+        let err = null;
+            try{
+                subsInfo = await program.account.subscription.fetch(pda);
+                err = "Pda account should not exist anymore"
+            } catch {}
+        if (err) throw new Error(err);
+        console.log(`__AFTER UNSUBSCRIBE`)
+        console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`Authority balance was: ${providedBalanceBefore / LAMPORTS_PER_SOL} SOL and now is: ${await provider.connection.getBalance(provider.wallet.publicKey) / LAMPORTS_PER_SOL} SOL`);
+        console.log(`User has unsubscribed from the account, now he wants to create a new account with premium type \n`);
     });
 
     
