@@ -9,6 +9,7 @@ describe("main_state", () => {
   const provider = anchor.AnchorProvider.env()
 
   anchor.setProvider(provider);
+  console.log('Provider pubkey: ', provider.wallet.publicKey.toBase58());
 
   // const programId = anchor.workspace.w3_subs_tracker as Program<W3SubsTracker>;
   
@@ -23,9 +24,6 @@ describe("main_state", () => {
     try {
       const tx = await program.methods
       .intializeMainState(10)
-      .accounts({
-        mainState: pda,
-      })
       .rpc();
       // show the main state
       const mainState = await program.account.mainState.fetch(pda);
@@ -42,7 +40,7 @@ describe("main_state", () => {
     }
   });
 
-  it('Should change the authority (correct signer)', async () => {
+  it('Should change the authority and then back to provider (correct signer)', async () => {
     const tx = await program.methods
       .updateAuthority(keypair.publicKey)
       .accounts({
@@ -78,43 +76,60 @@ describe("main_state", () => {
 
   it('Should change the owner (correct signer), but will not go back to the original owner (unauthorised signer)', async () => {
     const tx = await program.methods
-      .updateOwner(keypair.publicKey)
+      .updateOwner(provider.wallet.publicKey)
       .accounts({ mainState: pda })
       .rpc();
     const mainState = await program.account.mainState.fetch(pda);
-    if (mainState.owner.toBase58() !== keypair.publicKey.toBase58()) {
+    if (mainState.owner.toBase58() !== provider.publicKey.toBase58()) {
       throw new Error("Owner is not the same as the provider's pubkey");
     }
 
     const userAttemptor = await anchor.web3.Keypair.generate();
+    let err = null;
     try {
+
       const tx2 = await program.methods
         .updateOwner(userAttemptor.publicKey)
         .accounts({ mainState: pda, signer: userAttemptor.publicKey })
         .signers([userAttemptor])
         .rpc();
-      throw new Error("User with no permission was able to change the owner");
+      err = ("User with no permission was able to change the owner");
     } catch (e) {
       // all good
       const mainState = await program.account.mainState.fetch(pda);
     }
+    if (err) throw new Error(err);
 
 
   });
+  it("Should change the authority back to our provider", async () => {
+    const tx = await program.methods
+      .updateAuthority(provider.wallet.publicKey)
+      .accounts({ mainState: pda })
+      .rpc();
+    const mainState = await program.account.mainState.fetch(pda);
+    if (mainState.authority.toBase58() !== provider.wallet.publicKey.toBase58()) {
+      throw new Error("Authority is not the same as the provider's pubkey");
+    }
+  });
 
   it('Should\'t change the authority ( unauthorised signer)', async () => {
+    let err = null;
     try {
       const tx = await program.methods
       .updateOwner(keypair.publicKey)
       .accounts({ mainState: pda })
       .signers([keypair])
       .rpc();
-      if(tx) {
-        throw new Error("User with no permission was able to change the owner");
-      }
+      err = "User with no permission was able to change the owner";
+      
     } catch (e) {
       // all good
     }
+    if (err) throw new Error(err);
+
+    console.log(`Last state of the main state: ${JSON.stringify(await program.account.mainState.fetch(pda))}`)
+    
   })
 
 

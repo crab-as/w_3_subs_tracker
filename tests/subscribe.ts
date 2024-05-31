@@ -15,6 +15,7 @@ describe("subscribe", async () => {
     const provider = anchor.AnchorProvider.env()
 
     anchor.setProvider(provider);
+    console.log('Provider pubkey: ', provider.wallet.publicKey.toBase58());
     const fakeProvider = anchor.web3.Keypair.generate();
     
     const idl = require("../target/idl/w_3_subs_tracker.json") as any;
@@ -33,15 +34,19 @@ describe("subscribe", async () => {
 
 
     it("The PDA should be initialized for subcribetion tests", async () => {
-        const tx = await program.methods
-        .intializeMainState(10)
-        .accounts({
-          mainState: mainStatePDA,
-        })
-        .rpc();
+        try {
+            // check if mainState exists
+            const mainState = await program.account.mainState.fetch(mainStatePDA);
+        } catch {
+            // if mainState does not exist, create it
+            const tx = await program.methods
+                .intializeMainState(10)
+                .rpc({skipPreflight: true});
+        }
         const mainState = await program.account.mainState.fetch(mainStatePDA);
+        console.log("Main state: ", JSON.stringify(mainState));
         if( mainState.authority.toBase58() !== provider.wallet.publicKey.toBase58() ) {
-        throw new Error("Authority is not the same as the provider's pubkey");
+            throw new Error("Authority is not the same as the provider's pubkey");
         }
       });
 

@@ -6,7 +6,7 @@ use crate::state::main_state::*;
 
 #[derive(Accounts)]
 pub struct CreateSubscription<'info> {
-    #[account(init_if_needed, payer = user, space = 10 + 32 + 16 + 16 + 8 + 32,  seeds = [b"subscription", user.key().as_ref(), main_state.key().as_ref()], bump)]
+    #[account(init, payer = user, space = 10 + 32 + 16 + 16 + 8 + 32,  seeds = [b"subscription", user.key().as_ref(), main_state.key().as_ref()], bump)]
     pub subscription: Account<'info, Subscription>,
     #[account(mut)]
     pub main_state: Account<'info, MainState>,
@@ -251,7 +251,8 @@ pub mod processor {
             **subscription.to_account_info().try_borrow_mut_lamports()? -= refund_to_user as u64;
             **to_pubkey.try_borrow_mut_lamports()? += refund_to_user;
             // then all remaining lamports trnsfer from account to main_state PDA
-            let lamports_in_subs_acc = (subscription.to_account_info().lamports() as f32) as u64;
+            let lamports_in_subs_acc = (subscription.to_account_info().lamports() - Rent::get()?.minimum_balance(subscription.to_account_info().data_len())) as u64;
+            msg!("This is problematic line with given lamports for with: {:?}", lamports_in_subs_acc);
             **subscription.to_account_info().try_borrow_mut_lamports()? -= lamports_in_subs_acc;
             **ctx.accounts.main_state_owner.to_account_info().try_borrow_mut_lamports()? += lamports_in_subs_acc;
         }

@@ -41,6 +41,17 @@ mod w_3_subs_tracker {
         main_state::processor::update_owner(ctx, new_owner)
     }
     /**
+     * Instruction which will be used to update the fees for the unsubcription related actions.
+     * Authorised: MainState.authority
+     */
+    pub fn update_fees(ctx: Context<UpdateFees>, new_fees: u8) -> Result<()> {
+        main_state::processor::update_fees(ctx, new_fees)
+    }
+
+
+
+    
+    /**
      * Instruction which creates new subscription for the user.
      * Authorised: Subscription.user
      */
@@ -82,6 +93,8 @@ mod w_3_subs_tracker {
     pub fn withdraw(ctx: Context<WithdrawFromSubcription>, amount: Option<u64>) -> Result<()> {
         subscription::processor::withdraw(ctx, amount)
     }
+
+    
    
 }
 

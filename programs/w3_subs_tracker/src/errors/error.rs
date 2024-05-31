@@ -1,6 +1,12 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
+pub enum MainStateError {
+    #[msg("MainState is already initialized")]
+    MainStateAlreadyInitialized,
+}
+
+#[error_code]
 pub enum SubscriptionError {
     #[msg("Initial deposit must be greater than 0")]
     InvalidInitialDeposit,

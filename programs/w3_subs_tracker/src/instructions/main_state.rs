@@ -12,7 +12,7 @@ pub struct UpdateOwner<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeMainState<'info> {
-    #[account(init_if_needed, payer = user, space = 8 + 64 + 1, seeds=["mainState".as_bytes()], bump)]
+    #[account(init, payer = user, space = 8 + 64 + 1, seeds=["mainState".as_bytes()], bump)]
     pub main_state: Account<'info, MainState>,
     #[account(mut)]
     pub user: Signer<'info>,
@@ -37,6 +37,8 @@ pub struct UpdateFees<'info> {
 }
 
 pub mod processor {
+    use crate::errors::error::MainStateError;
+
     use super::*;
     pub fn intialize_main_state(ctx: Context<InitializeMainState>, fees: u8) -> Result<()> {
         let main_state = &mut ctx.accounts.main_state;
