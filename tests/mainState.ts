@@ -53,7 +53,7 @@ describe("main_state", () => {
     }
   });
 
-  it('Should change the owner (correct signer) and then back to original owner (unauthorised signer)', async () => {
+  it('Should change the owner to temp_owner (init_owner signer) and then back to original init_owner (temp_owner signer)', async () => {
     const tx = await program.methods
       .updateOwner(keypair.publicKey)
       .accounts({mainState: pda})
@@ -74,7 +74,7 @@ describe("main_state", () => {
     }
   });
 
-  it('Should change the owner (correct signer), but will not go back to the original owner (unauthorised signer)', async () => {
+  it('Should change the owner to himself (correct signer), but other user cant change the owner (unauthorized signer)', async () => {
     const tx = await program.methods
       .updateOwner(provider.wallet.publicKey)
       .accounts({ mainState: pda })
@@ -95,14 +95,13 @@ describe("main_state", () => {
         .rpc();
       err = ("User with no permission was able to change the owner");
     } catch (e) {
-      // all good
       const mainState = await program.account.mainState.fetch(pda);
     }
     if (err) throw new Error(err);
 
 
   });
-  it("Should change the authority back to our provider", async () => {
+  it("Should change the authority back to our init_provider", async () => {
     const tx = await program.methods
       .updateAuthority(provider.wallet.publicKey)
       .accounts({ mainState: pda })
@@ -113,7 +112,7 @@ describe("main_state", () => {
     }
   });
 
-  it('Should\'t change the authority ( unauthorised signer)', async () => {
+  it('Should\'t change the authority ( unauthorized signer )', async () => {
     let err = null;
     try {
       const tx = await program.methods

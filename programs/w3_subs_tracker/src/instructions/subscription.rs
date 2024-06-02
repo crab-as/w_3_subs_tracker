@@ -6,7 +6,7 @@ use crate::state::main_state::*;
 
 #[derive(Accounts)]
 pub struct CreateSubscription<'info> {
-    #[account(init, payer = user, space = 10 + 32 + 16 + 16 + 8 + 32,  seeds = [b"subscription", user.key().as_ref(), main_state.key().as_ref()], bump)]
+    #[account(init, payer = user, space = 64 + 17 + 17 + 8,  seeds = [b"subscription", user.key().as_ref(), main_state.key().as_ref()], bump)]
     pub subscription: Account<'info, Subscription>,
     #[account(mut)]
     pub main_state: Account<'info, MainState>,
@@ -90,7 +90,6 @@ pub mod processor {
 
     use anchor_lang::system_program::{self, Transfer};
     use solana_program::native_token::LAMPORTS_PER_SOL;
-
 
     use crate::{errors::error::SubscriptionError};
 
@@ -212,8 +211,8 @@ pub mod processor {
      * Let the user owner unsubscribe from the subscription account.
      * Applicable if user wants to end whole subscription and gets its lamports or if he wants to change the subscription type.
      */
-    pub fn unsubscribe(ctx: Context<Unsubscribe>, withdraw_content: bool) -> Result<()> {
-        msg!("Params: {:?}", withdraw_content);
+    pub fn unsubscribe(ctx: Context<Unsubscribe>, withdraw_content: bool, change_desired_subs_type: Option<SubscriptionType>) -> Result<()> {
+        msg!("Params: {:?}, {:?}", withdraw_content, change_desired_subs_type);
         // checks for valid main_state account inserted in the context
         if ctx.accounts.subscription.imutable_initialized.main_state_pda.key() != ctx.accounts.main_state.key() {
             return Err(SubscriptionError::IncorrectMainState.into());
@@ -240,7 +239,7 @@ pub mod processor {
         
         let current_used_lamports = subscription.authority_writable.used_lamports;
         let lamports_as_credits = subscription.subscription_status_writable.after_verify_credit_lamports;
-        let fees = (100.0 - ctx.accounts.main_state.unsubcribe_fee as f32) / 100.0;
+        let fees = (100.0 - ctx.accounts.main_state.unsubscribe_fee as f32) / 100.0;
         
         if withdraw_content {
             if ctx.accounts.to_account.is_none() {
@@ -257,7 +256,6 @@ pub mod processor {
             **ctx.accounts.main_state_owner.to_account_info().try_borrow_mut_lamports()? += lamports_in_subs_acc;
         }
         msg!("partial: {:?}, fees: {:?}, current_used: {:?}, credits: {:?}", partial, fees, current_used_lamports as f32 / LAMPORTS_PER_SOL as f32, lamports_as_credits as f32/ LAMPORTS_PER_SOL as f32);
-        msg!("{:?}", (current_used_lamports as f32 * partial * fees / 2.0) as u64 + lamports_as_credits);
         subscription.authority_writable = AuthorityWritable {
             current_account_type: SubscriptionType::FREE,
             valid_till: 0,
@@ -266,7 +264,7 @@ pub mod processor {
         subscription.subscription_status_writable = CurrentSubscriptionStatistics {
             after_verify_credit_lamports: if withdraw_content { 0 } else { (current_used_lamports as f32 * partial * (fees + (1.0 - fees) / 2.0  ) ) as u64 + lamports_as_credits },
             after_verify_utc_timestamp: unix_time,
-            desired_subscription_type: SubscriptionType::FREE,
+            desired_subscription_type: if change_desired_subs_type.is_some() { change_desired_subs_type.unwrap() } else { SubscriptionType::FREE },
         };
         Ok(())
     }

@@ -44,7 +44,7 @@ pub mod processor {
         let main_state = &mut ctx.accounts.main_state;
         main_state.owner = *ctx.accounts.user.key;
         main_state.authority = *ctx.accounts.user.key;
-        main_state.unsubcribe_fee = fees;
+        main_state.unsubscribe_fee = fees;
         Ok(())
     }
 
@@ -71,7 +71,7 @@ pub mod processor {
         if main_state.owner != *ctx.accounts.signer.key {
             return Err(ErrorCode::ConstraintAddress.into());
         }
-        main_state.unsubcribe_fee = new_fees;
+        main_state.unsubscribe_fee = new_fees;
         Ok(())
     }
 }

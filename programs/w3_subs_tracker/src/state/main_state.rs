@@ -4,5 +4,5 @@ use anchor_lang::prelude::*;
 pub struct MainState {
     pub owner: Pubkey,
     pub authority: Pubkey,
-    pub unsubcribe_fee: u8,
+    pub unsubscribe_fee: u8,
 }

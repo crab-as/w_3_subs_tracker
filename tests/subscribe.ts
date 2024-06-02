@@ -33,7 +33,7 @@ describe("subscribe", async () => {
     }
 
 
-    it("The PDA should be initialized for subcribetion tests", async () => {
+    it("The PDA should be initialized for subscribetion tests", async () => {
         try {
             // check if mainState exists
             const mainState = await program.account.mainState.fetch(mainStatePDA);
@@ -78,7 +78,7 @@ describe("subscribe", async () => {
         }   
     });
 
-    it("Should make first user as active subcriber", async () => {
+    it("Should make first user as active subscriber", async () => {
         const user1 = usersKeyPairs[0];
         const pda = subsPdas[0];
         const futureDate = new BN(Date.now() + 1000 * 60 * 60 * 24 * 30);
@@ -93,7 +93,7 @@ describe("subscribe", async () => {
         const subsInfo = await program.account.subscription.fetch(pda);
     });
 
-    it("Shouldn't let make second user as active subcriber, due to fakeProvider, but after changing authority it will change it's valid_till", async () => {
+    it("Shouldn't let make second user as active subscriber, due to fakeProvider, but after changing authority it will change it's valid_till", async () => {
         const user2 = usersKeyPairs[1];
         const pda = subsPdas[1];
         const futureDate = new BN(Date.now() + 1000 * 60 * 60 * 24 * 30);
@@ -108,7 +108,7 @@ describe("subscribe", async () => {
                 })
                 .signers([fakeProvider])
                 .rpc();
-            err = "Shouldn't let make second user as active subcriber, due to fakeProvider";
+            err = "Shouldn't let make second user as active subscriber, due to fakeProvider";
         } catch (error) {
             const tx = await program.methods
                 .updateAuthority(fakeProvider.publicKey)

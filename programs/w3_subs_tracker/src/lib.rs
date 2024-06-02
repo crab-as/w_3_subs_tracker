@@ -76,8 +76,8 @@ mod w_3_subs_tracker {
      * Instruction which will be used to unsubscribe the user from the subscription, meaning sending back the last deposited funds to the user, sending remaining lamports to the main_state PDA and closing the account.
      * Authorised: MainState.authority || Subscription.user
      */
-    pub fn unsubscribe(ctx: Context<Unsubscribe>, withdraw_content: bool) -> Result<()> {
-        subscription::processor::unsubscribe(ctx, withdraw_content)
+    pub fn unsubscribe(ctx: Context<Unsubscribe>, withdraw_content: bool, new_desired_subs_type: Option<SubscriptionType>) -> Result<()> {
+        subscription::processor::unsubscribe(ctx, withdraw_content, new_desired_subs_type)
     }
     /**
      * Instruction which will be used to fund the subscription account with new deposit.
