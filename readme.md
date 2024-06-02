@@ -9,6 +9,16 @@
 
 ## Deployment Model
 - The current version requires deploying a new program for each subscription tracker, meaning you can't use a program already deployed by other users.
+- To deploy
+  - (A) generate new programId `solana-keygen new -o ./target/w_3_subs_tracker-keypair.json`
+  - deploy: `anchor deploy` (min rent > 2.505 SOL)
+  - initialize main state with local keypair
+    - copy programId after deployment and update it in Anchor.toml and lib.rs
+    - update env: anchor `anchor upgrade target/deploy/w_3_subs_tracker.so --provider.cluster ${cluster: devnet|mainet} --program-id ${from step (A) }`
+    - replace lib.rs and Anchor.toml programId with programId from step (A)
+    - run `anchor run mainStateInit`
+- To close program
+  - `solana program close ${program id} --bypass-warning`
 
 ## Functionality
 - Users can create subscription accounts (PDA) with an initial deposit, known as `credits`.

@@ -10,11 +10,12 @@ describe("main_state", () => {
 
   anchor.setProvider(provider);
   console.log('Provider pubkey: ', provider.wallet.publicKey.toBase58());
-
+  
   // const programId = anchor.workspace.w3_subs_tracker as Program<W3SubsTracker>;
   
   const idl = require("../target/idl/w_3_subs_tracker.json") as any;
   const program = new anchor.Program(idl, provider) as Program<W3SubsTracker>;
+  console.log(`Provided program id: ${program.programId.toBase58()}`);
   const keypair = anchor.web3.Keypair.generate();
 
   const [pda, _] = anchor.web3.PublicKey.findProgramAddressSync([Buffer.from('mainState')], program.programId);
