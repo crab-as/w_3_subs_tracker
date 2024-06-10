@@ -13,7 +13,7 @@ describe("main_state", () => {
   
   // const programId = anchor.workspace.w3_subs_tracker as Program<W3SubsTracker>;
   
-  const idl = require("../target/idl/w_3_subs_tracker.json") as any;
+  const idl = require("../target/idl/w_3_subs_tracker.json");
   const program = new anchor.Program(idl, provider) as Program<W3SubsTracker>;
   console.log(`Provided program id: ${program.programId.toBase58()}`);
   const keypair = anchor.web3.Keypair.generate();

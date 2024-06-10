@@ -39,6 +39,7 @@ pub struct Unsubscribe<'info> {
     #[account(mut)]
     pub to_account: Option<SystemAccount<'info>>,
     /// CHECK: This is not dangerous, we are using main_state_owner as creditor for refund after user refund
+    #[account(mut)]
     pub main_state_owner: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub main_state: Account<'info, MainState>,

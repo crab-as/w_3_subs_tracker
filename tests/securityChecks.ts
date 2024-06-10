@@ -634,8 +634,4 @@ describe("securityChecks", () => {
             throw new Error("Should have let correct user use unsubscribe functionality");
         }
     });
-
-
-
-
 });

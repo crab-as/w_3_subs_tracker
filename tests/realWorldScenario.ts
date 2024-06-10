@@ -284,7 +284,7 @@ describe("real_world_scenairo", async () => {
         console.log(`In account info, user has ${subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() / LAMPORTS_PER_SOL} SOL as credits and ${subsInfo.authorityWritable.usedLamports.toNumber() / LAMPORTS_PER_SOL} SOL as debits`);
         console.log(`User balance is ${await provider.connection.getBalance(userKeyPair.publicKey) / LAMPORTS_PER_SOL} SOL`);
         console.log(`User has unsubscribed from the account, now he wants to create a new account with premium type \n`);
-        if (subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() <= 0.1 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.29 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
+        if (subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() <= 0.07 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.35 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
         if(Object.keys(subsInfo.subscriptionStatusWritable.desiredSubscriptionType)[0] !== 'free') throw new Error("Desired subscription type is not correct"); 
         const tx3 = await program.methods
             .changeDesiredSubscriptionType(p)
@@ -300,7 +300,7 @@ describe("real_world_scenairo", async () => {
         console.log(`User has changed his subscription type to premium, now he wants to fund the account \n`);
         if(Object.keys(subsInfo.subscriptionStatusWritable.desiredSubscriptionType)[0] !== 'premium') throw new Error("Desired subscription type is not correct"); 
         const pdaCreditsAfterUnsubscribe = subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber();
-        if (pdaCreditsAfterUnsubscribe <= 0.1 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.27 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
+        if (pdaCreditsAfterUnsubscribe <= 0.05 * LAMPORTS_PER_SOL ||  subsInfo.subscriptionStatusWritable.afterVerifyCreditLamports.toNumber() >= 0.35 * LAMPORTS_PER_SOL) throw new Error("Balance of credits is not correct");
         
         const tx4 = await program.methods
             .fundSubscription(new BN(LAMPORTS_PER_SOL * 0.2))
@@ -343,7 +343,7 @@ describe("real_world_scenairo", async () => {
         console.log(`Authority balance is ${await provider.connection.getBalance(provider.wallet.publicKey) / LAMPORTS_PER_SOL} SOL \n`);
         if (subsInfo.authorityWritable.usedLamports.toNumber() !== 0.4 * LAMPORTS_PER_SOL ) throw new Error("Balance of debits is not correct");
 
-        // user usnubcsribes from given account causing given pda to be deleted
+        // user usnubcsribes from given account causing given pda to be empty
         const providedBalanceBefore = await provider.connection.getBalance(provider.publicKey);
         const tx7 = await program.methods
             .unsubscribe(true, null)

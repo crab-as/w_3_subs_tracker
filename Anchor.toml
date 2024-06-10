@@ -5,13 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-w_3_subs_tracker = "9ooN4bXynREMTKjaQ8ZfemrhCBe8a7xjscCXKVTUFpZg"
+w_3_subs_tracker = "31K77tro5CwWDDnKuxmzBNQZJgc1PsgERiUrpc914uZ8"
 
 [programs.devnet]
-w_3_subs_tracker = "9ooN4bXynREMTKjaQ8ZfemrhCBe8a7xjscCXKVTUFpZg"
+w_3_subs_tracker = "31K77tro5CwWDDnKuxmzBNQZJgc1PsgERiUrpc914uZ8"
 
 [programs.mainnet]
-w_3_subs_tracker = "9ooN4bXynREMTKjaQ8ZfemrhCBe8a7xjscCXKVTUFpZg"
+w_3_subs_tracker = "31K77tro5CwWDDnKuxmzBNQZJgc1PsgERiUrpc914uZ8"
 
 [registry]
 url = "https://api.apr.dev"
